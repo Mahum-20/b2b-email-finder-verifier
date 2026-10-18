@@ -102,9 +102,9 @@ def run_finder_and_verifier(first_name: str, last_name: str, domain_input: str):
         sys.stdout.write(f"[{status} - {confidence}]\n")
         sys.stdout.flush()
 
-        rec = "⭐ TOP PREDICTION" if idx == 0 else ""
+        rec = "[TOP PICK]" if idx == 0 else ""
         if status == VerificationStatus.VALID:
-            rec = "✅ VERIFIED ACTIVE"
+            rec = "[VERIFIED ACTIVE]"
 
         table_rows.append([
             email,
@@ -131,12 +131,12 @@ def run_finder_and_verifier(first_name: str, last_name: str, domain_input: str):
     best_pattern = candidates[0]["label"]
     best_prob = candidates[0]["probability"]
 
-    print("\n" + "★" * 80)
+    print("\n" + "*" * 80)
     if found_valid:
-        print(f"  [RESULT] 🎯 VERIFIED WORKING EMAIL: {found_valid}")
+        print(f"  [RESULT] >> VERIFIED WORKING EMAIL: {found_valid}")
         print("  Status : Live SMTP server confirmed mailbox exists (250 OK).")
     else:
-        print(f"  [RESULT] 🎯 MOST ACCURATE PREDICTED EMAIL: {best_candidate}")
+        print(f"  [RESULT] >> MOST ACCURATE PREDICTED EMAIL: {best_candidate}")
         print(f"  Format : {best_pattern} (~{best_prob} of businesses at this domain)")
         if port_blocked:
             print("  Reason : Outbound Port 25 is filtered by your local ISP, preventing live mailbox ping.")
@@ -144,7 +144,7 @@ def run_finder_and_verifier(first_name: str, last_name: str, domain_input: str):
             print(f"           '{best_candidate}' is statistically the #1 most accurate address.")
         elif is_catch_all:
             print("  Reason : Mail server is Catch-All (accepts all incoming emails).")
-    print("★" * 80 + "\n")
+    print("*" * 80 + "\n")
 
 
 def main():
