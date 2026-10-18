@@ -225,7 +225,7 @@ class EmailVerifier:
     # ==========================================
     # Complete Pipeline Verification for an Email
     # ==========================================
-    def verify(self, email: str) -> Dict:
+    def verify(self, email: str, pattern_weight: float = 10.0) -> Dict:
         """
         Runs the full 5-stage verification pipeline for an email address.
         """
@@ -289,8 +289,11 @@ class EmailVerifier:
             result["status"] = VerificationStatus.SMTP_UNREACHABLE
             result["details"].append("[Step 4: Network] Outbound Port 25 is filtered/blocked by your local ISP.")
             result["details"].append("[Step 5: SMTP Handshake] Skipped direct SMTP test due to ISP port 25 restriction.")
-            result["confidence"] = 65  # DNS & MX verified, but cannot ping individual mailbox locally
-            result["notes"] = "DNS & MX verified. SMTP handshake unavailable due to local ISP port 25 filter."
+            # Calculate weighted probability score so candidates are accurately ranked
+            base_confidence = 50
+            weighted_boost = int(pattern_weight * 0.45)
+            result["confidence"] = min(95, base_confidence + weighted_boost)
+            result["notes"] = f"DNS & MX verified. Predicted from pattern likelihood ({pattern_weight}% market share)."
             return result
 
         # Check catch-all

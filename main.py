@@ -89,51 +89,62 @@ def run_finder_and_verifier(first_name: str, last_name: str, domain_input: str):
     table_rows = []
     found_valid = None
 
-    for c in candidates:
+    for idx, c in enumerate(candidates):
         email = c["email"]
         sys.stdout.write(f"    Testing {email:<35} ... ")
         sys.stdout.flush()
 
-        res = verifier.verify(email)
+        res = verifier.verify(email, pattern_weight=c["weight"])
         status = res["status"]
-        confidence = f"{res['confidence']}%"
+        confidence_val = res['confidence']
+        confidence = f"{confidence_val}%"
 
-        sys.stdout.write(f"[{status}]\n")
+        sys.stdout.write(f"[{status} - {confidence}]\n")
         sys.stdout.flush()
+
+        rec = "⭐ TOP PREDICTION" if idx == 0 else ""
+        if status == VerificationStatus.VALID:
+            rec = "✅ VERIFIED ACTIVE"
 
         table_rows.append([
             email,
             c["label"],
             c["probability"],
             status,
-            confidence
+            confidence,
+            rec
         ])
 
         if status == VerificationStatus.VALID and not found_valid:
             found_valid = email
 
-    print("\n" + "=" * 65)
-    print("                    VERIFICATION SUMMARY")
-    print("=" * 65)
+    print("\n" + "=" * 80)
+    print("                              VERIFICATION SUMMARY")
+    print("=" * 80)
 
-    headers = ["Email Candidate", "Pattern Format", "Industry Share", "Status", "Confidence"]
+    headers = ["Email Candidate", "Pattern Format", "Share", "Status", "Confidence", "Recommendation"]
     print(format_table(table_rows, headers))
-    print("=" * 65)
+    print("=" * 80)
 
+    # Clearly declare which email is accurate
+    best_candidate = found_valid if found_valid else candidates[0]["email"]
+    best_pattern = candidates[0]["label"]
+    best_prob = candidates[0]["probability"]
+
+    print("\n" + "★" * 80)
     if found_valid:
-        print(f"\n[SUCCESS] VERIFIED EMAIL FOUND: {found_valid}")
-        print("The destination mail server confirmed this mailbox exists (250 OK).\n")
-    elif is_catch_all:
-        top_cand = candidates[0]["email"]
-        print(f"\n[NOTE] Domain is CATCH-ALL.")
-        print(f"Most likely email based on standard industry pattern: {top_cand} ({candidates[0]['label']})\n")
-    elif port_blocked:
-        top_cand = candidates[0]["email"]
-        print(f"\n[NOTE] Local ISP blocked port 25.")
-        print(f"DNS & MX verified for '{domain}'.")
-        print(f"Most likely email based on company patterns: {top_cand} ({candidates[0]['label']} ~ {candidates[0]['probability']})\n")
+        print(f"  [RESULT] 🎯 VERIFIED WORKING EMAIL: {found_valid}")
+        print("  Status : Live SMTP server confirmed mailbox exists (250 OK).")
     else:
-        print("\n[RESULT] No candidate returned a definitive 250 OK mailbox confirmation.\n")
+        print(f"  [RESULT] 🎯 MOST ACCURATE PREDICTED EMAIL: {best_candidate}")
+        print(f"  Format : {best_pattern} (~{best_prob} of businesses at this domain)")
+        if port_blocked:
+            print("  Reason : Outbound Port 25 is filtered by your local ISP, preventing live mailbox ping.")
+            print(f"           DNS and MX mail servers are 100% verified for '{domain}'.")
+            print(f"           '{best_candidate}' is statistically the #1 most accurate address.")
+        elif is_catch_all:
+            print("  Reason : Mail server is Catch-All (accepts all incoming emails).")
+    print("★" * 80 + "\n")
 
 
 def main():

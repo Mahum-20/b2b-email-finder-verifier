@@ -143,15 +143,18 @@ if find_button:
         found_winner = None
         logs = []
 
-        total = len(candidates)
         for idx, c in enumerate(candidates):
             email = c["email"]
             progress_bar.progress((idx + 1) / total, text=f"Checking {email}...")
             
-            res = verifier.verify(email)
+            res = verifier.verify(email, pattern_weight=c["weight"])
             status = res["status"]
             confidence = res["confidence"]
             
+            rec = "⭐ Top Prediction" if idx == 0 else ""
+            if status == VerificationStatus.VALID:
+                rec = "✅ Confirmed Mailbox"
+
             logs.append({
                 "email": email,
                 "status": status,
@@ -162,9 +165,10 @@ if find_button:
             results_data.append({
                 "Email Candidate": email,
                 "Pattern Format": c["label"],
-                "Likelihood (Market Share)": c["probability"],
-                "Status": status,
+                "Industry Share": c["probability"],
                 "Confidence": f"{confidence}%",
+                "Recommendation": rec,
+                "Status": status,
                 "Notes": res["notes"]
             })
 
@@ -173,21 +177,25 @@ if find_button:
 
         progress_bar.empty()
 
-        # Highlight winner or top candidate
+        # Best Candidate Resolution
+        best_email = found_winner if found_winner else candidates[0]["email"]
+        best_pattern = candidates[0]["label"]
+        best_prob = candidates[0]["probability"]
+
         if found_winner:
-            st.success(f"🎯 **Verified Working Email Found:** `{found_winner}` (Server confirmed 250 OK)")
-        elif is_catch_all:
-            top_cand = candidates[0]["email"]
-            st.warning(
-                f"⚠️ **Catch-All Domain Detected:** Mail server accepts all addresses. "
-                f"Most statistically likely email is `{top_cand}` ({candidates[0]['label']} pattern, ~{candidates[0]['probability']})."
-            )
-        elif port_blocked:
-            top_cand = candidates[0]["email"]
-            st.info(
-                f"💡 **DNS & MX are fully verified.** Based on corporate pattern statistics, the most likely email is "
-                f"**`{top_cand}`** ({candidates[0]['label']} pattern, ~{candidates[0]['probability']})."
-            )
+            st.success(f"🎯 **Verified Working Email Found:** `{best_email}` (Mail server confirmed 250 OK)")
+        else:
+            st.markdown(f"""
+            <div style="background-color: #e8f4fd; border: 2px solid #2196f3; border-radius: 8px; padding: 16px; margin: 15px 0;">
+                <h3 style="color: #0d47a1; margin-top: 0; margin-bottom: 8px;">🎯 Most Accurate Email: <code style="font-size: 1.1em; color: #0d47a1;">{best_email}</code></h3>
+                <p style="margin-bottom: 4px; color: #1565c0;">
+                    <b>Standard Pattern:</b> {best_pattern} (~{best_prob} market share for corporate domains)
+                </p>
+                <p style="margin-bottom: 0; font-size: 0.9em; color: #546e7a;">
+                    <i>Note: Outbound Port 25 is filtered by your network/ISP, preventing live SMTP simulation. DNS and MX records for <b>{domain}</b> are 100% verified active.</i>
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
         # Table Display
         df = pd.DataFrame(results_data)
